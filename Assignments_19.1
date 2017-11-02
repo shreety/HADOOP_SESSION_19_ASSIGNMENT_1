@@ -1,0 +1,23 @@
+import org.apache.spark.sql.SQLContext
+import sqlContext.implicits._
+case class Record(Firstname: String,Lastname: String,Sports: String,Medal_type: String,Age: Int,Year: Int,Country: String)
+
+val sportsDataSet = sc.textFile("hdfs:///user/cloudera/Sports_data.txt").filter(_.nonEmpty)
+val skip_first_row = sportsDataSet.first() 
+val FilteredSportsDataSet= sportsDataSet.filter(row => row != skip_first_row)
+
+val dfRecords = FilteredSportsDataSet.map(_.split(",") match{
+case Array(firstname,lastname,sports,medal_type,age,year,country) => Record(firstname,lastname,sports,medal_type,age.toInt,year.toInt,country)
+case unexpectedArrayForm => 
+    throw new RuntimeException("Record did not have correct number of fields: " +
+      unexpectedArrayForm.mkString("\t"))
+}).toDF()
+
+dfRecords.registerTempTable("dfRecords")
+1. What are the total number of gold medal winners every year
+
+sqlContext.sql("select Year, count(*) from dfRecords where Medal_type = 'gold' GROUP BY Year").show()
+
+2. How many silver medals have been won by USA in each sport
+
+sqlContext.sql("select Sports,count(*) from dfRecords where Country ='USA' GROUP BY Sports").show()
